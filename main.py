@@ -1,4 +1,5 @@
 import openpyxl as xl
+from prettytable import PrettyTable
 
 
 class Conta:
@@ -28,6 +29,36 @@ class Conta:
         for cell in base_contas['C']:
             if cell.value == self.classificacao:
                 raise ValueError
+
+    def consulta_plano_de_contas():
+        
+        tabela = PrettyTable()
+
+        coluna_a, coluna_b, coluna_c = [], [], []
+            
+        for column in base_contas['A:C']:
+            
+            for cell in column:
+                if cell.row == 1:
+                    continue
+
+                match cell.column:
+
+                    case 1:
+                        coluna_a.append(cell.value)
+
+                    case 2:
+                        coluna_b.append(cell.value)
+
+                    case 3:
+                        coluna_c.append(cell.value)
+            
+
+        tabela.add_column('Código', coluna_a)
+        tabela.add_column('Nome', coluna_b)
+        tabela.add_column('Classificação', coluna_c)
+
+        print(f'\n{tabela}')
 
 
 class Lancamento:
@@ -93,6 +124,47 @@ class Lancamento:
         else:
             raise ValueError
 
+    def consulta_lancamentos():
+        
+        tabela = PrettyTable()
+
+        coluna_a, coluna_b, coluna_c = [], [], []
+        coluna_d, coluna_e, coluna_f = [], [] ,[]
+            
+        for column in base_contas['A:F']:
+            
+            for cell in column:
+                if cell.row == 1:
+                    continue
+
+                match cell.column:
+
+                    case 1:
+                        coluna_a.append(cell.value)
+
+                    case 2:
+                        coluna_b.append(cell.value)
+
+                    case 3:
+                        coluna_c.append(cell.value)
+
+                    case 4:
+                        coluna_d.append(cell.value)
+
+                    case 5:
+                        coluna_e.append(cell.value)
+
+                    case 6:
+                        coluna_f.append(cell.value)
+            
+        tabela.add_column('Código', coluna_a)
+        tabela.add_column('Data', coluna_b)
+        tabela.add_column('Débito', coluna_c)
+        tabela.add_column('Crédito', coluna_d)
+        tabela.add_column('Valor', coluna_e)
+        tabela.add_column('Descrição', coluna_f)
+
+        print(f'\n{tabela}')
 
 try:
     df = xl.load_workbook(r'base.xlsx')
@@ -116,35 +188,47 @@ except FileNotFoundError:
     df.save('base.xlsx')
 
 print('\nSistema contabil', end='\n\n')
-print('1 - Criar contas\n2 - Lançar\n3 - Sair', end='\n\n')
+print('1 - Criar contas\n2 - Lançar\n3 - Consultar plano de contas')
+print('4 - Consultar lançamentos\n5 - Editar conta\n6 - Editar lançamento\n')
 
 
 escolha = int(input('O que você deseja fazer? '))
 
-if escolha == 1:
-    print()
-    nome_conta = input('Nome da conta: ')
-    class_conta = int(input('Classificação: '))
-    conta = Conta(nome_conta, class_conta)
+match escolha:
 
-    base_contas.append([conta.cod, conta.nome, conta.classificacao])
+    case 1:
+        print()
+        nome_conta = input('Nome da conta: ')
+        class_conta = int(input('Classificação: '))
+        conta = Conta(nome_conta, class_conta)
 
-elif escolha == 2:
-    print()
-    data_lanc = input('Data: ')
-    debito_lanc = int(input('Débito: '))
-    credito_lanc = int(input('Crédito: '))
-    valor_lanc = float(input('Valor: '))
-    descr_lanc = input('Descrição: ')
-    parcelas_lanc = input('Parcelas: ')
-    lanc = Lancamento(valor_lanc, data_lanc, debito_lanc, credito_lanc, descr_lanc, parcelas_lanc)
+        base_contas.append([conta.cod, conta.nome, conta.classificacao])
 
-    base_lancamentos.append([lanc.cod, lanc.data, lanc.debito, lanc.credito, lanc.valor, lanc.descricao])
+    case 2:
+        print()
+        data_lanc = input('Data: ')
+        debito_lanc = int(input('Débito: '))
+        credito_lanc = int(input('Crédito: '))
+        valor_lanc = float(input('Valor: '))
+        descr_lanc = input('Descrição: ')
+        parcelas_lanc = input('Parcelas: ')
+        lanc = Lancamento(valor_lanc, data_lanc, debito_lanc, credito_lanc, descr_lanc, parcelas_lanc)
 
-elif escolha == 3:
-    pass
+        base_lancamentos.append([lanc.cod, lanc.data, lanc.debito, lanc.credito, lanc.valor, lanc.descricao])
 
-else:
-    print('Opção não disponível')
+    case 3:
+        Conta.consulta_plano_de_contas()
+
+    case 4:
+        Lancamento.consulta_lancamentos()
+
+    case 5:
+        pass
+
+    case 6:
+        pass
+
+    case opcao_invalida:
+        print('Opção invalida.')
 
 df.save('base.xlsx')
