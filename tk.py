@@ -1,35 +1,143 @@
+import openpyxl as xl
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
 from tkcalendar import DateEntry
-import openpyxl as xl
 from prettytable import PrettyTable
 
 
+def atualizar_tree_contas():
+    
+    tree_contas.delete(*tree_contas.get_children())
+    
+    for cell in base_contas['A:A']:
+        if cell.row == 1:
+            continue
+    
+        tree_contas.insert('', END, values=(base_contas[f'C{cell.row}'].value, 
+                                            base_contas[f'B{cell.row}'].value, 
+                                            cell.value))
+
+
+def limpar_campos_conta():
+    
+    valor_codigo.delete(0, END)
+    valor_descricao_conta.delete(0, END)
+    valor_classificacao.delete(0, END)
+    valor_classificacao.focus()
+
+
+def criar_conta():
+    if valor_classificacao.get() == '' or valor_descricao_conta.get() == '' or valor_codigo.get() == "":
+        messagebox.showinfo(title='Erro', message='Preencha todos os campos.')
+        return
+
+    Conta(valor_descricao_conta.get(), valor_classificacao.get(), valor_codigo.get(), True)
+    
+
+def editar_conta():
+    if valor_classificacao.get() == '' or valor_descricao_conta.get() == '' or valor_codigo.get() == '':
+        messagebox.showinfo(title='Erro', message='Preencha todos os campos.')
+        return
+    
+    Conta.edita_conta(int(valor_codigo.get()))
+
+
+def deletar_conta():
+    if valor_codigo.get() == '':
+        messagebox.showinfo(title='Erro', message='Digite o código da conta.')
+        return
+    
+    Conta.deleta_conta(int(valor_codigo.get()))
+
+
+def duplo_clique_contas(event):
+    limpar_campos_conta()
+    selecao = tree_contas.focus()
+    valores = tree_contas.item(selecao, 'values')
+    
+    valor_classificacao.insert(0, valores[0])
+    valor_descricao_conta.insert(0, valores[1])
+    valor_codigo.insert(0, valores[2])
+
+def atualizar_tree_lancamentos():
+    
+    tree_lancamentos.delete(*tree_lancamentos.get_children())
+    
+    for cell in base_lancamentos['A:A']:
+        if cell.row == 1:
+            continue
+    
+        tree_lancamentos.insert('', END, values=(cell.value,
+                                                 base_lancamentos[f'B{cell.row}'].value, 
+                                                 base_lancamentos[f'C{cell.row}'].value, 
+                                                 base_lancamentos[f'D{cell.row}'].value,
+                                                 base_lancamentos[f'E{cell.row}'].value,
+                                                 base_lancamentos[f'F{cell.row}'].value))
+
+def limpar_campos_lancamentos():
+    
+    valor_data.delete(0, END)
+    valor_debito.delete(0, END)
+    valor_credito.delete(0, END)
+    valor_valor.delete(0, END)
+    valor_descricao_lanc.delete('1.0', END)
+    valor_data.focus()
+
+def lancar():
+    if valor_valor.get() == '' or valor_data.get() == '' or valor_debito.get() == '' or valor_credito.get() == '' or valor_descricao_lanc.get('1.0', 'end-1c') == '':
+        messagebox.showinfo(title='Erro', message='Preencha todos os campos.')
+        return
+    
+    Lancamento(valor_valor.get(), valor_data.get(), valor_debito.get(), valor_credito.get(), valor_descricao_lanc.get('1.0', 'end-1c'), True)
+
+
+def editar_lancamento():
+    pass
+
+def deletar_lancamento():
+    pass
+
+def duplo_clique_lancamentos(event):
+    limpar_campos_lancamentos()
+    
+    selecao = tree_lancamentos.focus()
+    valores = tree_lancamentos.item(selecao, 'values')
+    
+    valor_data.insert(0, valores[1])
+    valor_debito.insert(0, valores[2])
+    valor_credito.insert(0, valores[2])
+    valor_valor.insert(0, valores[4])
+    valor_descricao_lanc.insert('1.0', valores[5])
+
 class Conta:
 
-    def __init__(self, nome, classificacao, adicionar_na_base=False):
+    def __init__(self, nome, classificacao, codigo, adicionar_na_base=False):
         
         self.nome = nome
         self.classificacao = classificacao
+        self.codigo = codigo
         
         try:
-            total_contas = len(base_contas['A'])
-            self.cod = base_contas['A'][total_contas - 1].value + 1
-        except TypeError:
-            self.cod = 1
+            for cell in base_contas['A']:
+                if cell.value == self.codigo:
+                    raise ValueError
+        except ValueError:
+            messagebox.showinfo(title='Erro!', message='Código já existente.')
+            adicionar_na_base = False
 
-        classificacao_valida = False
-        while not classificacao_valida:
-            try:
-                self.verifica_classificacao()
-                classificacao_valida = True
-            except ValueError:
-                print('Erro: Classificação já existente.', end='\n\n')
-                self.classificacao = int(input('Classificação: '))
+        try:
+            self.verifica_classificacao()
+        except ValueError:
+            messagebox.showinfo(title='Erro!', message='Classificação já existente.')
+            adicionar_na_base = False
 
         if adicionar_na_base:
-            base_contas.append([self.cod, self.nome, self.classificacao])
+            base_contas.append([self.codigo, self.nome, self.classificacao])
+            df.save('base.xlsx')
+            tree_contas.insert('', END, values=(self.classificacao, self.nome, self.codigo))
+            limpar_campos_conta()
+            messagebox.showinfo(title='Sucesso!', message='Conta criada com sucesso.')
 
     def verifica_classificacao(self):
         
@@ -37,54 +145,32 @@ class Conta:
             if cell.value == self.classificacao:
                 raise ValueError
 
-    def consulta_plano_de_contas():
-        
-        tabela = PrettyTable()
-
-        coluna_a, coluna_b, coluna_c = [], [], []
-            
-        for column in base_contas['A:C']:
-            
-            for cell in column:
-                if cell.row == 1:
-                    continue
-
-                match cell.column:
-
-                    case 1:
-                        coluna_a.append(cell.value)
-
-                    case 2:
-                        coluna_b.append(cell.value)
-
-                    case 3:
-                        coluna_c.append(cell.value)
-            
-
-        tabela.add_column('Código', coluna_a)
-        tabela.add_column('Nome', coluna_b)
-        tabela.add_column('Classificação', coluna_c)
-
-        print(f'\n{tabela}')
-
     def edita_conta(cod):
         
         for cell in base_contas['A']:
-            if cell.value == cod:
+            if cell.value == valor_codigo.get():
                 linha = cell.row
-                print()
-                nome = input('Nome: ')
-                classificacao = int(input('Classificação: '))
-                Conta(nome, classificacao)
+                nome = valor_descricao_conta.get()
+                classificacao = valor_classificacao.get()
+                cod = valor_codigo.get()
+                #Conta(nome, classificacao, cod)
 
                 base_contas[f'B{linha}'] = nome
                 base_contas[f'C{linha}'] = classificacao
+                df.save('base.xlsx')
+                atualizar_tree_contas()
+                limpar_campos_conta()
+                messagebox.showinfo(title='Sucesso!', message='Conta alterada com sucesso.')
 
     def deleta_conta(cod):
 
         for cell in base_contas['A']:
-            if cell.value == cod:
+            if cell.value == valor_codigo.get():
                 base_contas.delete_rows(cell.row)
+                df.save('base.xlsx')
+                atualizar_tree_contas()
+                limpar_campos_conta()
+                messagebox.showinfo(title='Sucesso!', message='Conta deletada com sucesso.')
 
 
 class Lancamento:
@@ -105,26 +191,24 @@ class Lancamento:
         except TypeError:
             self.cod = 1
 
-        debito_valido = False
-        while not debito_valido:
-            try:
-                self.verifica_debito()
-                debito_valido = True
-            except ValueError:
-                print('Erro: Conta débito não existente.', end='\n\n')
-                self.debito = int(input('Débito: '))
+        try:
+            self.verifica_debito()
+        except ValueError:
+            messagebox.showinfo(title='Erro', message='Conta débito inexistente.')
+            adicionar_na_base = False
 
-        credito_valido = False
-        while not credito_valido:
-            try:
-                self.verifica_credito()
-                credito_valido = True
-            except ValueError:
-                print('Erro: Conta crédito não existente.', end='\n\n')
-                self.credito = int(input('Crédito: '))
+        try:
+            self.verifica_credito()
+        except ValueError:
+            messagebox.showinfo(title='Erro', message='Conta crédito inexistente.')
+            adicionar_na_base = False
 
         if adicionar_na_base:
             base_lancamentos.append([self.cod, self.data, self.debito, self.credito, self.valor, self.descricao])
+            df.save('base.xlsx')
+            atualizar_tree_lancamentos()
+            limpar_campos_conta()
+            messagebox.showinfo(title='Sucesso!', message='Lançamento efetuado com sucesso.')
 
     def verifica_debito(self):
         
@@ -245,12 +329,6 @@ except FileNotFoundError:
 
 # match escolha:
 
-#     case 1:
-#         print()
-#         nome_conta = input('Nome da conta: ')
-#         class_conta = int(input('Classificação: '))
-#         conta = Conta(nome_conta, class_conta, True)
-
 #     case 2:
 #         print()
 #         data_lanc = input('Data: ')
@@ -261,36 +339,18 @@ except FileNotFoundError:
 #         parcelas = input('Parcelas: ')
 #         lanc = Lancamento(valor_lanc, data_lanc, debito_lanc, credito_lanc, descr_lanc, True)
 
-#     case 3:
-#         Conta.consulta_plano_de_contas()
-
 #     case 4:
 #         Lancamento.consulta_lancamentos()
-
-#     case 5:
-#         print()
-#         Conta.edita_conta(int(input('Código da conta: ')))
 
 #     case 6:
 #         print()
 #         Lancamento.edita_lancamento(int(input('Código do lançamento: ')))
 
-#     case 7:
-#         print()
-#         Conta.deleta_conta(int(input('Código da conta: ')))
-
 #     case 8:
 #         print()
 #         Lancamento.deleta_lancamento(int(input('Código do lançamento: ')))
 
-#     case opcao_invalida:
-#         print(f'{opcao_invalida} não é uma opção valida.')
-
-df.save('base.xlsx')
-
-
 ########################################################################################################################################################################################
-
 
 main = Tk()
 main.title('Contabilidade')
@@ -337,49 +397,55 @@ valor_classificacao = Entry(aba_contas)
 valor_classificacao.place(x=130, y=50, width=100, height=25)
 
 Label(aba_contas, text='Descrição:', font=('Arial', 12), bg='#D4D4D4').place(x=16, y=85, height=25)
-valor_descricao = Entry(aba_contas)
-valor_descricao.place(x=130, y=85, width=100, height=25)
+valor_descricao_conta = Entry(aba_contas)
+valor_descricao_conta.place(x=130, y=85, width=100, height=25)
 
 Label(aba_contas, text='Código:', font=('Arial', 12), bg='#D4D4D4').place(x=16, y=120, height=25)
 valor_codigo = Entry(aba_contas)
 valor_codigo.place(x=130, y=120, width=100, height=25)
 
-tree = ttk.Treeview(aba_contas, columns=('Classificação', 'Descrição', 'Código'), show='headings')
-tree.column('Classificação', minwidth=25, width=100)
-tree.column('Descrição', minwidth=50, width=250)
-tree.column('Código', minwidth=50, width=25)
-tree.heading('Classificação', text='Classificação')
-tree.heading('Descrição', text='Descrição')
-tree.heading('Código', text='Código')
+tree_contas = ttk.Treeview(aba_contas, columns=('Classificação', 'Descrição', 'Código'), show='headings')
+tree_contas.column('Classificação', minwidth=25, width=100)
+tree_contas.column('Descrição', minwidth=50, width=250)
+tree_contas.column('Código', minwidth=50, width=25)
+tree_contas.heading('Classificação', text='Classificação')
+tree_contas.heading('Descrição', text='Descrição')
+tree_contas.heading('Código', text='Código')
 
-tree.place(x=365, y=5, width=625, height=590)
+tree_contas.place(x=365, y=5, width=625, height=590)
+tree_contas.bind('<Double-1>', duplo_clique_contas)
 
-Button(aba_contas, text='Gravar').place(x=19, y=200, width=75, height=25)
+atualizar_tree_contas()
 
-Button(aba_contas, text='Alterar').place(x=143, y=200, width=75, height=25)
+Button(aba_contas, text='Gravar', command=criar_conta).place(x=19, y=200, width=75, height=25)
 
-Button(aba_contas, text='Excluir').place(x=264, y=200, width=75, height=25)
+Button(aba_contas, text='Alterar', command=editar_conta).place(x=143, y=200, width=75, height=25)
+
+Button(aba_contas, text='Excluir', command=deletar_conta).place(x=264, y=200, width=75, height=25)
 
 # ABA LANCAMENTOS #
 
 Frame(aba_lacamentos, bg='#000000').place(x=5, y=5, width=350, height=590)
 Frame(aba_lacamentos, bg='#D4D4D4').place(x=6, y=6, width=348, height=588)
 
-tree = ttk.Treeview(aba_lacamentos, columns=('Id', 'Data', 'Débito', 'Crédito', 'Valor', 'Descrição'), show='headings')
-tree.column('Id', minwidth=10, width=10)
-tree.column('Data', minwidth=10, width=40)
-tree.column('Débito', minwidth=10, width=20)
-tree.column('Crédito', minwidth=10, width=20)
-tree.column('Valor', minwidth=10, width=35)
-tree.column('Descrição', minwidth=10, width=330)
-tree.heading('Id', text='Id')
-tree.heading('Data', text='Data')
-tree.heading('Débito', text='Débito')
-tree.heading('Crédito', text='Crédito')
-tree.heading('Valor', text='Valor')
-tree.heading('Descrição', text='Descrição')
+tree_lancamentos = ttk.Treeview(aba_lacamentos, columns=('Id', 'Data', 'Débito', 'Crédito', 'Valor', 'Descrição'), show='headings')
+tree_lancamentos.column('Id', minwidth=10, width=10)
+tree_lancamentos.column('Data', minwidth=10, width=40)
+tree_lancamentos.column('Débito', minwidth=10, width=20)
+tree_lancamentos.column('Crédito', minwidth=10, width=20)
+tree_lancamentos.column('Valor', minwidth=10, width=35)
+tree_lancamentos.column('Descrição', minwidth=10, width=330)
+tree_lancamentos.heading('Id', text='Id')
+tree_lancamentos.heading('Data', text='Data')
+tree_lancamentos.heading('Débito', text='Débito')
+tree_lancamentos.heading('Crédito', text='Crédito')
+tree_lancamentos.heading('Valor', text='Valor')
+tree_lancamentos.heading('Descrição', text='Descrição')
 
-tree.place(x=365, y=5, width=625, height=590)
+tree_lancamentos.place(x=365, y=5, width=625, height=590)
+tree_lancamentos.bind('<Double-1>', duplo_clique_lancamentos)
+
+atualizar_tree_lancamentos()
 
 Label(aba_lacamentos, text='Lançar', bg='#C0C0C0', font=('Arial', 14, 'bold')).place(x=6, y=10, width=348, height=25)
 
@@ -400,19 +466,19 @@ valor_valor = Entry(aba_lacamentos)
 valor_valor.place(x=100, y=155, width=100, height=25)
 
 Label(aba_lacamentos, text='Descrição:', font=('Arial', 12), bg='#D4D4D4').place(x=16, y=190, height=25)
-valor_descrisao = Text(aba_lacamentos)
-valor_descrisao.place(x=19, y=215, width=320, height=100)
+valor_descricao_lanc = Text(aba_lacamentos)
+valor_descricao_lanc.place(x=19, y=215, width=320, height=100)
 
-Button(aba_lacamentos, text='Gravar').place(x=19, y=350, width=75, height=25)
+Button(aba_lacamentos, text='Gravar', command=lancar).place(x=19, y=350, width=75, height=25)
 
-Button(aba_lacamentos, text='Alterar').place(x=143, y=350, width=75, height=25)
+Button(aba_lacamentos, text='Alterar', command=editar_lancamento).place(x=143, y=350, width=75, height=25)
 
-Button(aba_lacamentos, text='Excluir').place(x=264, y=350, width=75, height=25)
+Button(aba_lacamentos, text='Excluir', command=deletar_lancamento).place(x=264, y=350, width=75, height=25)
 
 # def valor():
-#     print(valor_descrisao.get('1.0', 'end-1c'))
+#     print(valor_descrisao_lanc.get('1.0', 'end-1c'))
 
-tree.insert('', END, values=('1', '14/09/2022', '1125', '1975', '10000,00', 'Saldo anterior - 31/12/2021'))
+tree_lancamentos.insert('', END, values=('1', '14/09/2022', '1125', '1975', '10000,00', 'Saldo anterior - 31/12/2021'))
 
 # ABA RELATORIOS #
 
@@ -444,23 +510,23 @@ Button(aba_relatorios, text='Gerar').place(x=124, y=235, width=75, height=25)
 # resumo
 Label(aba_relatorios, text='Resumo', bg='#C0C0C0', font=('Arial', 14, 'bold')).place(x=336.5, y=10, width=323, height=25)
 
-tree = ttk.Treeview(aba_relatorios, columns=('Mês', 'Débito', 'Crédito', 'Saldo'), show='headings')
-tree.column('Mês', minwidth=10, width=10)
-tree.column('Débito', minwidth=10, width=10)
-tree.column('Crédito', minwidth=10, width=10)
-tree.column('Saldo', minwidth=10, width=10)
-tree.heading('Mês', text='Mês')
-tree.heading('Débito', text='Débito')
-tree.heading('Crédito', text='Crédito')
-tree.heading('Saldo', text='Saldo')
+tree_resumo = ttk.Treeview(aba_relatorios, columns=('Mês', 'Débito', 'Crédito', 'Saldo'), show='headings')
+tree_resumo.column('Mês', minwidth=10, width=10)
+tree_resumo.column('Débito', minwidth=10, width=10)
+tree_resumo.column('Crédito', minwidth=10, width=10)
+tree_resumo.column('Saldo', minwidth=10, width=10)
+tree_resumo.heading('Mês', text='Mês')
+tree_resumo.heading('Débito', text='Débito')
+tree_resumo.heading('Crédito', text='Crédito')
+tree_resumo.heading('Saldo', text='Saldo')
 
-tree.place(x=346, y=275, width=305, height=268)
+tree_resumo.place(x=346, y=275, width=305, height=268)
 
 meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
          'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 for i in meses:
-    tree.insert('', END, values=(i, '0,00', '0,00', '0,00'))
+    tree_resumo.insert('', END, values=(i, '0,00', '0,00', '0,00'))
 
 Label(aba_relatorios, text='Conta:', font=('Arial', 12), bg='#D4D4D4').place(x=348, y=80, height=25, width=75)
 Label(aba_relatorios, text='Ano:', font=('Arial', 12), bg='#D4D4D4').place(x=343, y=125, height=25, width=75)
