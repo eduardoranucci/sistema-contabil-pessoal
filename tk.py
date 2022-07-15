@@ -29,7 +29,7 @@ def limpar_campos_conta():
 
 def criar_conta():
     if valor_classificacao.get() == '' or valor_descricao_conta.get() == '' or valor_codigo.get() == "":
-        messagebox.showinfo(title='Erro', message='Preencha todos os campos.')
+        messagebox.showerror(title='Erro', message='Preencha todos os campos.')
         return
 
     Conta(valor_descricao_conta.get(), valor_classificacao.get(), valor_codigo.get(), True)
@@ -37,7 +37,7 @@ def criar_conta():
 
 def editar_conta():
     if valor_classificacao.get() == '' or valor_descricao_conta.get() == '' or valor_codigo.get() == '':
-        messagebox.showinfo(title='Erro', message='Preencha todos os campos.')
+        messagebox.showerror(title='Erro', message='Preencha todos os campos.')
         return
     
     Conta.edita_conta(int(valor_codigo.get()))
@@ -48,7 +48,7 @@ def deletar_conta():
     valores = tree_contas.item(selecao, 'values')
     
     if valores == '':
-        messagebox.showinfo(title='Erro', message='Selecione uma conta.')
+        messagebox.showerror(title='Erro', message='Selecione uma conta.')
         return
     
     print(valores[2])
@@ -90,21 +90,20 @@ def limpar_campos_lancamentos():
 
 def lancar():
     if valor_valor.get() == '' or valor_data.get() == '' or valor_debito.get() == '' or valor_credito.get() == '' or valor_descricao_lanc.get('1.0', 'end-1c') == '':
-        messagebox.showinfo(title='Erro', message='Preencha todos os campos.')
+        messagebox.showerror(title='Erro', message='Preencha todos os campos.')
         return
     
     Lancamento(valor_valor.get(), valor_data.get(), valor_debito.get(), valor_credito.get(), valor_descricao_lanc.get('1.0', 'end-1c'), True)
-    #limpar_campos_lancamentos()
 
 
 def editar_lancamento():
     if valor_valor.get() == '' or valor_data.get() == '' or valor_debito.get() == '' or valor_credito.get() == '' or valor_descricao_lanc.get('1.0', 'end-1c') == '':
-        messagebox.showinfo(title='Erro', message='Preencha todos os campos.')
+        messagebox.showerror(title='Erro', message='Preencha todos os campos.')
         print('erro')
         return
 
     if valor_debito.get() == valor_credito.get():
-        messagebox.showinfo(title='Erro', message='Conta débito não pode ser igual a conta crédito.')
+        messagebox.showerror(title='Erro', message='Conta débito não pode ser igual a conta crédito.')
         return
     
     Lancamento.edita_lancamento(int(valor_id))
@@ -117,7 +116,7 @@ def deletar_lancamento():
     valores = tree_lancamentos.item(selecao, 'values')
     
     if valores == '':
-        messagebox.showinfo(title='Erro', message='Selecione um lançamento.')
+        messagebox.showerror(title='Erro', message='Selecione um lançamento.')
         return
     
     Lancamento.deleta_lancamento(int(valores[0]))
@@ -143,7 +142,7 @@ class Conta:
     def __init__(self, nome, classificacao, codigo, adicionar_na_base=False):
         
         self.nome = nome
-        self.classificacao = classificacao
+        self.classificacao = classificacao.replace('.', '')
         self.codigo = codigo
         
         try:
@@ -159,9 +158,33 @@ class Conta:
             adicionar_na_base = False
 
         if adicionar_na_base:
-            base_contas.append([int(self.codigo), self.nome, self.classificacao])
-            df.save('base.xlsx')
-            tree_contas.insert('', END, values=(self.classificacao, self.nome, self.codigo))
+            # self.coloca_ponto()
+            # base_contas.append([int(self.codigo), self.nome, self.classificacao])
+            # df.save('base.xlsx')
+            clas = str(self.classificacao)
+            for cell in base_contas['A:A']:
+                
+                if cell.row == 1:
+                    continue
+                
+                if len(clas) == 1:
+                    
+                    if int(str(cell.value)[0]) == int(clas[0]):
+                        pass
+                    
+                if len(clas) == 2:
+                    pass
+                
+                if len(clas) == 4:
+                    pass
+
+                if len(clas) == 6:
+                    pass
+
+                if len(clas) == 10:
+                    pass                
+            
+            atualizar_tree_contas()
             limpar_campos_conta()
             messagebox.showinfo(title='Sucesso!', message='Conta criada com sucesso.')
 
@@ -169,13 +192,28 @@ class Conta:
         
         for cell in base_contas['C']:
             if cell.value == self.classificacao:
-                messagebox.showinfo(title='Erro!', message='Código já existente.')
+                messagebox.showerror(title='Erro!', message='Código já existente.')
                 raise ValueError
             
             validos = [1, 2, 4, 6, 10]
-            if len(self.classificacao) not in validos:
-                messagebox.showinfo(title='Erro!', message='Classificação inválida.')
+            if len(self.classificacao) not in validos:                
+                msg = 'Classificação inválida.\n\nClassificações válidas:\n\nX\nX.X\nX.X.XX\nX.X.XX.XX\nX.X.XX.XXXX'
+                messagebox.showerror(title='Erro!', message=msg)
                 raise ValueError
+            
+    def coloca_ponto(self):
+        clas = self.classificacao
+        
+        if len(clas) == 1:
+            pass
+        if len(clas) == 2:
+            self.classificacao = f'{clas[0]}.{clas[1:]}'
+        if len(clas) == 4:
+            self.classificacao = f'{clas[0]}.{clas[1]}.{clas[2:]}'
+        if len(clas) == 6:
+            self.classificacao = f'{clas[0]}.{clas[1]}.{clas[2:4]}.{clas[4:]}'
+        if len(clas) == 10:
+            self.classificacao = f'{clas[0]}.{clas[1]}.{clas[2:4]}.{clas[4:6]}.{clas[6:]}'
 
     def edita_conta(cod):
         
@@ -226,20 +264,20 @@ class Lancamento:
         try:
             self.verifica_debito()
         except ValueError:
-            messagebox.showinfo(title='Erro', message='Conta débito inexistente.')
+            messagebox.showerror(title='Erro', message='Conta débito inexistente.')
             adicionar_na_base = False
 
         try:
             self.verifica_credito()
         except ValueError:
-            messagebox.showinfo(title='Erro', message='Conta crédito inexistente.')
+            messagebox.showerror(title='Erro', message='Conta crédito inexistente.')
             adicionar_na_base = False
             
         try:    
             if self.credito == self.debito:
                 raise ValueError
         except:
-            messagebox.showinfo(title='Erro', message='Conta débito não pode ser igual a conta crédito.')
+            messagebox.showerror(title='Erro', message='Conta débito não pode ser igual a conta crédito.')
             adicionar_na_base = False
         
         if adicionar_na_base:
@@ -330,7 +368,8 @@ except FileNotFoundError:
 
 main = Tk()
 main.title('Contabilidade')
-main.geometry('1000x625')
+main.geometry('1000x645')
+main.iconbitmap(r'.\moon.ico')
 main.resizable(False, False)
 
 barra_menus = Menu(main)

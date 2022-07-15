@@ -80,10 +80,10 @@
 # # Execute Tkinter
 # root.mainloop()
 
-clas = '1234567890'
-meta = '1.2.34.56.7890'
-print(len(clas))
+# clas = '1234567890'
+# meta = '1.2.34.56.7890'
+# print(len(clas))
 
-clas_p = f'{clas[0]}.{clas[1]}.{clas[2:4]}.{clas[4:6]}.{clas[6:]}'
-print(meta)
-print(clas_p)
+# clas_p = f'{clas[0]}.{clas[1]}.{clas[2:4]}.{clas[4:6]}.{clas[6:]}'
+# print(meta)
+# print(clas_p)
