@@ -1,1 +1,1 @@
-# sistema-contabil-pessoal
+# mini-sistema-contabil
