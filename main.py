@@ -1,4 +1,6 @@
 import openpyxl as xl
+from openpyxl.worksheet.dimensions import ColumnDimension, DimensionHolder
+from openpyxl.utils import get_column_letter
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
@@ -94,7 +96,7 @@ def lancar():
         messagebox.showerror(title='Erro', message='Preencha todos os campos.')
         return
     
-    Lancamento(valor_valor.get(), valor_data.get(), valor_debito.get(), valor_credito.get(), valor_descricao_lanc.get('1.0', 'end-1c'), True)
+    Lancamento(float(valor_valor.get()), valor_data.get(), int(valor_debito.get()), int(valor_credito.get()), valor_descricao_lanc.get('1.0', 'end-1c'), True)
 
 
 def editar_lancamento():
@@ -145,9 +147,39 @@ def gerar_razao():
 
     razao_df = xl.Workbook()
     razao = razao_df.active
-    razao.append(['Código', 'Data', 'Débito', 'Crédito', 'Valor', 'Descrição'])
+    razao.append(['Data', 'Histórico', 'Id', 'Valor', 'Débito', 'Crédito', 'Saldo'])
+    
+    conta = int(valor_conta_razao.get())
+    data_inical = valor_data_inicial_razao.get()
+    data_final = valor_data_final_razao.get()
+    for cell in base_lancamentos['A:A']:
+        
+        linha = cell.row
+        debito = base_lancamentos[f'C{linha}'].value
+        credito = base_lancamentos[f'D{linha}'].value
+        data = base_lancamentos[f'B{linha}'].value
+        
+        if linha == 1:
+            continue
+        if data_inical <= data and data_final >= data:
+            
+            if conta == int(debito) or conta == int(credito):
+                historico = base_lancamentos[f'F{linha}'].value
+                id = base_lancamentos[f'A{linha}'].value
+                valor = base_lancamentos[f'E{linha}'].value
+                saldo = 0
+                razao.append([data, historico, id, valor, debito, credito, saldo])
+
+    razao.column_dimensions['A'].width = 12
+    razao.column_dimensions['B'].width = 40
+    razao.column_dimensions['C'].width = 12
+    razao.column_dimensions['D'].width = 12
+    razao.column_dimensions['E'].width = 12
+    razao.column_dimensions['F'].width = 12
+    razao.column_dimensions['G'].width = 12
 
     razao_df.save(caminho.name)
+    messagebox.showinfo(title='Sucesso!', message='Razão gerado com sucesso!')
 
 
 def gerar_resumo():
@@ -161,7 +193,21 @@ def gerar_balancete():
 
     balancete_df = xl.Workbook()
     balancete = balancete_df.active
-    balancete.append(['Classificação', 'Saldo anterior', 'Débito', 'Crédito', 'Saldo atual'])
+    balancete.append(['Classificação', 'Código', 'Descrição', 'Saldo anterior', 'Débito', 'Crédito', 'Saldo atual'])
+    for cell in base_contas['A:A']:
+        if cell.row == 1:
+            continue
+        linha = cell.row
+        
+        classificacao = base_contas[f'C{linha}'].value
+        codigo = base_contas[f'A{linha}'].value
+        descricao = base_contas[f'B{linha}'].value
+        saldo_anterior = 0
+        debito = 0
+        credito = 0
+        saldo_atual = 0
+        
+        balancete.append([classificacao, codigo, descricao, saldo_anterior, debito, credito, saldo_atual])
 
     balancete_df.save(caminho.name)
 
@@ -236,110 +282,29 @@ class Conta:
         except ValueError:
             adicionar_na_base = False
 
-        linhas = []
         if adicionar_na_base:
-            clas = str(self.classificacao)
-            invalido = True
+            
+            classificacao_nova_conta = str(self.classificacao)
+            contas = []
+            
             for cell in base_contas['C:C']:
-
-                valor = str(cell.value).replace('.', '')
-                linha = cell.row
                 if cell.row == 1:
                     continue
-                
-                if len(clas) == 1:
-                
-                    if int(valor[0]) > int(clas):
-                        self.adiciona_na_base(linha)
-                        invalido = False
-                        break
-                    
-                if len(clas) == 2:
-                      
-                    if valor[0] == clas[0]:
-                    
-                        linhas.append(cell.row)
-                        if clas[1] == 1 or clas[1] == 0:
-                            linha = linhas[len(linhas)-1] + 1
-                            self.adiciona_na_base(linha)
-                            invalido = False
-                            break
-                        if len(valor) < 2:  
-                            continue 
-                        if int(valor[1]) > int(clas[1]):
-                            self.adiciona_na_base(linha)
-                            invalido = False
-                            break   
-
-                if len(clas) == 4:
-
-                    if valor[:2] == clas[:2]:
-
-                        print(valor)
-                        linhas.append(cell.row)
-                        if clas[2:] == '01' or clas[2:] == '00':
-                            linha = linhas[len(linhas)-1] + 1
-                            self.adiciona_na_base(linha)
-                            invalido = False
-                            break
-                        if len(valor) < 4:
-                            continue 
-                        if int(valor[2:]) > int(clas[2:]):
-                            linha = linhas[len(linhas)-1] + 1
-                            self.adiciona_na_base(linha)
-                            invalido = False
-                            break
-
-                if len(clas) == 6:
-                    
-                    if valor[:4] == clas[:4]:
-
-                        linhas.append(cell.row)
-                        if clas[4:] == '01' or clas[4:] == '00':
-                            linha = linhas[len(linhas)-1] + 1
-                            self.adiciona_na_base(linha)
-                            invalido = False
-                            break
-                        if len(valor) < 6:  
-                            continue 
-                        if int(valor[4:]) > int(clas[4:]):
-                            self.adiciona_na_base(linha)
-                            invalido = False
-                            break
-
-                if len(clas) == 10:
-                    
-                    if valor[:6] == clas[:6]:
-
-                        linhas.append(cell.row)
-                        if clas[6:] == '01' or clas[6:] == '00':
-                            linha = linhas[len(linhas)-1] + 1
-                            self.adiciona_na_base(linha)
-                            invalido = False
-                            break
-                        if len(valor) < 10:  
-                            continue 
-                        if int(valor[6:]) > int(clas[6:]):
-                            self.adiciona_na_base(linha)
-                            invalido = False
-                            break            
+                contas.append(cell.value.replace('.', ''))
+            contas.reverse()
             
-            if invalido:
-                if len(clas) == 1:
-                    self.coloca_ponto()
-                    base_contas.append([int(self.codigo), self.nome, self.classificacao, self.d_ou_c, self.a_ou_s])
-                if len(clas) == 2:
-                    linha = linhas[len(linhas)-1] + 1
-                    self.adiciona_na_base(linha)
-                if len(clas) == 4:
-                    linha = linhas[len(linhas)-1] + 1
-                    self.adiciona_na_base(linha)
-                if len(clas) == 6:
-                    linha = linhas[len(linhas)-1] + 1
-                    self.adiciona_na_base(linha)
-                if len(clas) == 10:
-                    linha = linhas[len(linhas)-1] + 1
-                    self.adiciona_na_base(linha)
+            if contas == []:
+                    self.adiciona_na_base(2)
+            else:
+                j = 0
+                for conta in contas:
+                    j += 1
+                    if str(classificacao_nova_conta) > str(conta):
+                        tamanho_contas = len(contas)
+                        linha = (tamanho_contas - j) + 3
+                        self.adiciona_na_base(linha)
+                        break
+                
             df.save('base.xlsx')
             atualizar_tree_contas()
             limpar_campos_conta()
@@ -349,7 +314,7 @@ class Conta:
         
         for cell in base_contas['C']:
             if cell.value.replace('.', '') == self.classificacao:
-                messagebox.showerror(title='Erro!', message='Código já existente.')
+                messagebox.showerror(title='Erro!', message='Classificação já existente.')
                 raise ValueError
             
             validos = [1, 2, 4, 6, 10]
@@ -442,12 +407,14 @@ class Lancamento:
         except ValueError:
             messagebox.showerror(title='Erro', message='Conta débito inexistente.')
             adicionar_na_base = False
+            return
 
         try:
             self.verifica_credito()
         except ValueError:
             messagebox.showerror(title='Erro', message='Conta crédito inexistente.')
             adicionar_na_base = False
+            return
             
         try:    
             if self.credito == self.debito:
@@ -466,34 +433,31 @@ class Lancamento:
     def verifica_debito(self):
         
         contas = []
-        for cell in base_contas['A']:
+        for cell in base_contas['A:A']:
             contas.append(cell.value)
 
-        if self.debito in contas:
-            pass
-        else:
+        if self.debito not in contas:
             raise ValueError
 
     def verifica_credito(self):
 
         contas = []
-        for cell in base_contas['A']:
+        for cell in base_contas['A:A']:
             contas.append(cell.value)
 
-        if self.credito in contas:
-            pass
-        else:
+        if self.credito not in contas:
             raise ValueError
+            
 
     def edita_lancamento(cod):
         
-        for cell in base_lancamentos['A']:
+        for cell in base_lancamentos['A:A']:
             if cell.value == cod:
                 linha = cell.row
                 data = valor_data.get()
-                debito = valor_debito.get()
-                credito = valor_credito.get()
-                valor = valor_valor.get()
+                debito = int(valor_debito.get())
+                credito = int(valor_credito.get())
+                valor = float(valor_valor.get())
                 descricao = valor_descricao_lanc.get('1.0', 'end-1c')
                 Lancamento(valor, data, debito, credito, descricao)
 
@@ -544,9 +508,10 @@ except FileNotFoundError:
 
 main = Tk()
 main.title('Contabilidade')
-main.geometry('1000x645')
+main.minsize(width=1000,height=645)
+main.resizable(width=0,height=0)
 main.iconbitmap(r'.\favicon.ico')
-main.resizable(False, False)
+
 
 # barra_menus = Menu(main)
 # menu_arquivo = Menu(barra_menus, tearoff=0)
@@ -603,23 +568,22 @@ Label(aba_contas, text='Natureza:', font=('Arial', 12), bg='#D4D4D4').place(x=16
 valor_natureza = StringVar()
 valor_natureza.set('Débito')
 OptionMenu(aba_contas, valor_natureza, 'Crédito', 'Débito').place(x=130, y=155, width=100, height=25)
-# Label(aba_contas, text='* Somente em contas de grau 1 é necessário informar a natureza.', font=('Arial', 8), bg='#D4D4D4').place(x=16, y=190)
 
-tree_contas = ttk.Treeview(aba_contas, columns=('Classificação', 'Descrição', 'Código'), show='headings')
+tree_contas = ttk.Treeview(aba_contas, columns=('Classificação', 'Descrição', 'Código'), show='headings', selectmode='browse')
+x_scroll = ttk.Scrollbar(aba_contas, orient='horizontal', command=tree_contas.xview)
+y_scroll = ttk.Scrollbar(aba_contas, orient='vertical', command=tree_contas.yview)
+x_scroll.place(y=578, x=365, width=624)
+y_scroll.place(y=5, x=972, height=573)
+tree_contas.configure(yscrollcommand=y_scroll.set)
+tree_contas.place(x=365, y=5, width=607, height=570)
+
 tree_contas.column('Classificação', minwidth=25, width=100)
 tree_contas.column('Descrição', minwidth=50, width=250)
 tree_contas.column('Código', minwidth=50, width=25)
 tree_contas.heading('Classificação', text='Classificação')
 tree_contas.heading('Descrição', text='Descrição')
 tree_contas.heading('Código', text='Código')
-tree_contas.place(x=365, y=5, width=625, height=590)
 tree_contas.bind('<Double-1>', duplo_clique_contas)
-
-x_scroll = Scrollbar(tree_contas, orient=HORIZONTAL, command=tree_contas.xview)
-y_scroll = Scrollbar(tree_contas, orient=VERTICAL, command=tree_contas.yview)
-x_scroll.place(y=572, x=1, width=623)
-y_scroll.place(y=25, x=607, height=548)
-tree_contas.config(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
 
 atualizar_tree_contas()
 
@@ -640,11 +604,19 @@ Button(aba_contas, text='Limpar', command=atualizar_tree_contas).place(x=206, y=
 Frame(aba_lacamentos, bg='#000000').place(x=5, y=5, width=350, height=590)
 Frame(aba_lacamentos, bg='#D4D4D4').place(x=6, y=6, width=348, height=588)
 
-tree_lancamentos = ttk.Treeview(aba_lacamentos, columns=('Id', 'Data', 'Débito', 'Crédito', 'Valor', 'Histórico'), show='headings')
+x_scroll = ttk.Scrollbar(aba_contas, orient='horizontal', command=tree_contas.xview)
+y_scroll = ttk.Scrollbar(aba_contas, orient='vertical', command=tree_contas.yview)
+x_scroll.place(y=578, x=365, width=624)
+y_scroll.place(y=5, x=972, height=573)
+tree_contas.configure(yscrollcommand=y_scroll.set)
+tree_contas.place(x=365, y=5, width=607, height=573)
+
+
+tree_lancamentos = ttk.Treeview(aba_lacamentos, columns=('Id', 'Data', 'Débito', 'Crédito', 'Valor', 'Histórico'), show='headings', selectmode='browse')
 tree_lancamentos.column('Id', minwidth=10, width=10)
 tree_lancamentos.column('Data', minwidth=10, width=40)
 tree_lancamentos.column('Débito', minwidth=10, width=20)
-tree_lancamentos.column('Crédito', minwidth=10, width=20)
+tree_lancamentos.column('Crédito', minwidth=10, width=25)
 tree_lancamentos.column('Valor', minwidth=10, width=35)
 tree_lancamentos.column('Histórico', minwidth=10, width=330)
 tree_lancamentos.heading('Id', text='Id')
@@ -653,14 +625,14 @@ tree_lancamentos.heading('Débito', text='Débito')
 tree_lancamentos.heading('Crédito', text='Crédito')
 tree_lancamentos.heading('Valor', text='Valor')
 tree_lancamentos.heading('Histórico', text='Histórico')
-tree_lancamentos.place(x=365, y=5, width=625, height=590)
 tree_lancamentos.bind('<Double-1>', duplo_clique_lancamentos)
 
-x_scroll = Scrollbar(tree_lancamentos, orient=HORIZONTAL, command=tree_lancamentos.xview)
-y_scroll = Scrollbar(tree_lancamentos, orient=VERTICAL, command=tree_lancamentos.yview)
-x_scroll.place(y=572, x=1, width=623)
-y_scroll.place(y=25, x=607, height=548)
-tree_lancamentos.config(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+x_scroll = ttk.Scrollbar(aba_lacamentos, orient='horizontal', command=tree_lancamentos.xview)
+y_scroll = ttk.Scrollbar(aba_lacamentos, orient='vertical', command=tree_lancamentos.yview)
+x_scroll.place(y=578, x=365, width=624)
+y_scroll.place(y=5, x=972, height=573)
+tree_lancamentos.configure(yscrollcommand=y_scroll.set)
+tree_lancamentos.place(x=365, y=5, width=607, height=573)
 
 atualizar_tree_lancamentos()
 
